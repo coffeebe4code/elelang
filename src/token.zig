@@ -2,7 +2,7 @@ const std = @import("std");
 const ascii = @import("std").ascii;
 const testing = std.testing;
 
-export const TokenE = enum(u8) {
+pub const Token = enum(u8) {
     Import,
     Define,
     Macro,
@@ -125,24 +125,18 @@ export const TokenE = enum(u8) {
     Symbol,
     Hex,
     Bin,
-    Num,
     Decimal,
     NewLine,
-    Wsp,
-    Empty,
     Range,
 };
 
-threadlocal var ibuffer: []const u8 = undefined;
-threadlocal var iter = undefined;
-
-pub fn init(buffer: *[]const u8) @This() {
-    ibuffer = buffer;
-}
-
-pub fn get_next() anyerror!?TokenE {
-    var c: u8 = ibuffer;
-    if (ascii.isAlphabetic(c)) {} else if (ascii.isAlphanumeric(c)) {} else {
+pub fn get_next(buf: []const u8, len: *usize) anyerror!?Token {
+    len.* = 0;
+    const c = buf.*;
+    if (ascii.isAlphabetic(c)) {
+        len.* += 1;
+        tokenize_chars(buf, len);
+    } else if (ascii.isDigit(c)) {} else {
         return switch (c) {
             ' ' => {
                 skip_whitespace();
@@ -152,18 +146,49 @@ pub fn get_next() anyerror!?TokenE {
     }
 }
 
-inline fn tokenize_symbol() void {
-    //    iter++;
-    //    while (++ibuffer.* != std) {
-    //
-    //    }
+inline fn word_len_check(buf: []const u8) usize {
+    var len: usize = 1;
+    while (buf.len != len) {
+        const c = buf[len];
+        if (ascii.isAlphabetic(c)) {
+            len += 1;
+        } else {
+            switch (c) {
+                '_', '-' => {
+                    len += 1;
+                },
+                else => {
+                    break;
+                },
+            }
+        }
+    }
+    return len;
 }
 
-inline fn skip_whitespace() void {
-    //    iter++;
-    //    while (++ibuffer.* != std) {
-    //
-    //    }
+inline fn tokenize_chars(buf: []const u8, len: *usize) void {
+    var token = undefined;
+    len.* = word_len_check(buf, len);
+    token = .Symbol;
+    for (keywords) |word| {
+        if (word.len == len.*) {
+            if (std.mem.eql([]u8, word, buf[0 .. len.* - 1])) {}
+        }
+    }
+    return token;
+}
+
+inline fn skip_whitespace(buf: []const u8) usize {
+    var len: usize = 1;
+    while (buf.len != len) {
+        const c = buf[len];
+        if (c == ' ') {
+            len += 1;
+        } else {
+            break;
+        }
+    }
+    return len;
 }
 
 const keywords = [_]u8{
@@ -235,4 +260,23 @@ const keywords = [_]u8{
     "resume",
 };
 
-test "basic tokenization" {}
+test "word len check regular" {
+    const buf = "hello";
+    const len = word_len_check(buf);
+
+    try testing.expect(len == 5);
+}
+
+test "word len check _" {
+    const buf = "hello_there";
+    const len = word_len_check(buf);
+
+    try testing.expect(len == 11);
+}
+
+test "word len check -" {
+    const buf = "hello-there ";
+    const len = word_len_check(buf);
+
+    try testing.expect(len == 11);
+}
