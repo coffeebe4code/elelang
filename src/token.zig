@@ -2,6 +2,10 @@ const std = @import("std");
 const ascii = @import("std").ascii;
 const testing = std.testing;
 
+const TokenError = error{
+    InvalidToken,
+};
+
 pub const Token = enum(u8) {
     Import,
     Define,
@@ -12,6 +16,7 @@ pub const Token = enum(u8) {
     Let,
     Const,
     Once,
+    Local,
     Num,
     I32,
     U32,
@@ -32,7 +37,7 @@ pub const Token = enum(u8) {
     This,
     Null,
     Char,
-    WString,
+    String,
     Inline,
     Static,
     Switch,
@@ -44,7 +49,7 @@ pub const Token = enum(u8) {
     Return,
     Async,
     Await,
-    WBox,
+    Box,
     Trait,
     Ptr,
     Match,
@@ -66,9 +71,10 @@ pub const Token = enum(u8) {
     Pool,
     Observe,
     Message,
+    Block,
     Suspend,
     Resume,
-    Block,
+    Export,
     OParen,
     CParen,
     OBrace,
@@ -127,23 +133,27 @@ pub const Token = enum(u8) {
     Bin,
     Decimal,
     NewLine,
+    Wsp,
     Range,
 };
 
 pub fn get_next(buf: []const u8, len: *usize) anyerror!?Token {
     len.* = 0;
-    const c = buf.*;
+    const c = buf[0];
     if (ascii.isAlphabetic(c)) {
-        len.* += 1;
-        tokenize_chars(buf, len);
+        return tokenize_chars(buf, len);
     } else if (ascii.isDigit(c)) {} else {
         return switch (c) {
             ' ' => {
-                skip_whitespace();
-                return .Wsp;
+                len.* += skip_whitespace(buf);
+                return Token.Wsp;
+            },
+            else => {
+                return TokenError.InvalidToken;
             },
         };
     }
+    return TokenError.InvalidToken;
 }
 
 inline fn word_len_check(buf: []const u8) usize {
@@ -166,13 +176,19 @@ inline fn word_len_check(buf: []const u8) usize {
     return len;
 }
 
-inline fn tokenize_chars(buf: []const u8, len: *usize) void {
-    var token = undefined;
-    len.* = word_len_check(buf, len);
+inline fn tokenize_chars(buf: []const u8, len: *usize) Token {
+    var token: Token = undefined;
+    len.* = word_len_check(buf);
     token = .Symbol;
-    for (keywords) |word| {
+    var check = buf[0..len.*];
+    std.debug.print("check {s}\n", .{check});
+    for (keywords, 0..) |word, idx| {
         if (word.len == len.*) {
-            if (std.mem.eql([]u8, word, buf[0 .. len.* - 1])) {}
+            if (std.mem.eql(u8, word, check)) {
+                std.debug.print("match {s}\n", .{word});
+                token = @intToEnum(Token, idx);
+                return token;
+            }
         }
     }
     return token;
@@ -191,7 +207,7 @@ inline fn skip_whitespace(buf: []const u8) usize {
     return len;
 }
 
-const keywords = [_]u8{
+const keywords = [_][]const u8{
     "import",
     "define",
     "macro",
@@ -201,6 +217,7 @@ const keywords = [_]u8{
     "let",
     "const",
     "once",
+    "local",
     "num",
     "i32",
     "u32",
@@ -243,7 +260,7 @@ const keywords = [_]u8{
     "false",
     "void",
     "iface",
-    "gen",
+    "generic",
     "undef",
     "never",
     "bool",
@@ -258,6 +275,7 @@ const keywords = [_]u8{
     "block",
     "suspend",
     "resume",
+    "export",
 };
 
 test "word len check regular" {
@@ -279,4 +297,74 @@ test "word len check -" {
     const len = word_len_check(buf);
 
     try testing.expect(len == 11);
+}
+
+test "skip whitespace" {
+    const buf = "     hello";
+    var len: usize = undefined;
+    const tok = try get_next(buf, &len);
+
+    try testing.expect(len == 5);
+    try testing.expect(tok.? == Token.Wsp);
+}
+
+test "keywords tokens" {
+    var buf: []const u8 = "macro";
+    var len: usize = 0;
+    var tok = tokenize_chars(buf, &len);
+
+    try testing.expect(len == 5);
+    try testing.expect(tok == Token.Macro);
+
+    buf = "const";
+    len = 0;
+    tok = tokenize_chars(buf, &len);
+
+    try testing.expect(len == 5);
+    try testing.expect(tok == Token.Const);
+
+    buf = "local";
+    len = 0;
+    tok = tokenize_chars(buf, &len);
+
+    try testing.expect(len == 5);
+    try testing.expect(tok == Token.Local);
+
+    buf = "true";
+    len = 0;
+    tok = tokenize_chars(buf, &len);
+
+    try testing.expect(len == 4);
+    try testing.expect(tok == Token.True);
+
+    buf = "string";
+    len = 0;
+    tok = tokenize_chars(buf, &len);
+
+    try testing.expect(len == 6);
+    try testing.expect(tok == Token.String);
+
+    buf = "pub";
+    len = 0;
+    tok = tokenize_chars(buf, &len);
+
+    try testing.expect(len == 3);
+    try testing.expect(tok == Token.Pub);
+
+    buf = "resume";
+    len = 0;
+    tok = tokenize_chars(buf, &len);
+
+    try testing.expect(len == 6);
+    try testing.expect(tok == Token.Resume);
+
+    buf = "export";
+    len = 0;
+    tok = tokenize_chars(buf, &len);
+
+    std.debug.print("result {}\n", .{tok});
+    try testing.expect(len == 6);
+    std.debug.print("result {}\n", .{tok});
+    try testing.expect(tok == Token.Export);
+    std.debug.print("result {}\n", .{tok});
 }
