@@ -8,6 +8,7 @@ const TokenError = error{
 
 pub const Token = enum(u8) {
     Import,
+    Use,
     Define,
     Macro,
     Test,
@@ -137,23 +138,194 @@ pub const Token = enum(u8) {
     Range,
 };
 
-pub fn get_next(buf: []const u8, len: *usize) anyerror!?Token {
+pub fn get_next(buf: []const u8, len: *usize) anyerror!Token {
     len.* = 0;
     const c = buf[0];
     if (ascii.isAlphabetic(c)) {
         return tokenize_chars(buf, len);
-    } else if (ascii.isDigit(c)) {} else {
+    } else if (ascii.isDigit(c)) {
+        return Token.Num;
+    } else {
         return switch (c) {
             ' ' => {
                 len.* += skip_whitespace(buf);
                 return Token.Wsp;
+            },
+            '"' => {
+                len.* += skip_whitespace(buf);
+                return Token.Wsp;
+            },
+            '\'' => {
+                len.* += skip_whitespace(buf);
+                return Token.Wsp;
+            },
+            '(' => {
+                len.* += 1;
+                return Token.OParen;
+            },
+            ')' => {
+                len.* += 1;
+                return Token.CParen;
+            },
+            '{' => {
+                len.* += 1;
+                return Token.OBrace;
+            },
+            '}' => {
+                len.* += 1;
+                return Token.CBrace;
+            },
+            '[' => {
+                len.* += 1;
+                return Token.OArray;
+            },
+            ']' => {
+                len.* += 1;
+                return Token.CArray;
+            },
+            '.' => {
+                len.* += 1;
+                return Token.Dot;
+            },
+            ',' => {
+                len.* += 1;
+                return Token.Comma;
+            },
+            '$' => {
+                len.* += 1;
+                return Token.Dollar;
+            },
+            '?' => {
+                len.* += 1;
+                return Token.Question;
+            },
+            '#' => {
+                len.* += 1;
+                return Token.Pound;
+            },
+            ':' => {
+                len.* += 1;
+                return Token.Colon;
+            },
+            ';' => {
+                len.* += 1;
+                return Token.SColon;
+            },
+            '\\' => {
+                len.* += 1;
+                return Token.BSlash;
+            },
+            '`' => {
+                len.* += 1;
+                return Token.Backtick;
+            },
+            '_' => {
+                len.* += 1;
+                return Token.Rest;
+            },
+            '@' => {
+                len.* += 1;
+                return Token.At;
+            },
+            '>' => {
+                len.* += skip_whitespace(buf);
+                return Token.Gt;
+            },
+            '|' => {
+                return tokenize_two(buf, len, Token.OrLog, '=', Token.OrAs, '|', Token.Or);
+            },
+            '&' => {
+                return tokenize_two(buf, len, Token.AndLog, '&', Token.And, '=', Token.AndAs);
+            },
+            '<' => {
+                len.* += skip_whitespace(buf);
+                return Token.Lt;
+            },
+            '+' => {
+                return tokenize_two(buf, len, Token.Plus, '+', Token.Inc, '=', Token.AddAs);
+            },
+            '-' => {
+                return tokenize_two(buf, len, Token.Sub, '-', Token.Dec, '=', Token.SubAs);
+            },
+            '/' => {
+                return tokenize_one(buf, len, Token.Div, '=', Token.DivAs);
+            },
+            '*' => {
+                return tokenize_one(buf, len, Token.Mul, '=', Token.MulAs);
+            },
+            '^' => {
+                return tokenize_one(buf, len, Token.Xor, '=', Token.XorAs);
+            },
+            '!' => {
+                return tokenize_one(buf, len, Token.Not, '=', Token.NotEquality);
+            },
+            '%' => {
+                return tokenize_one(buf, len, Token.Mod, '=', Token.ModAs);
+            },
+            '~' => {
+                return tokenize_one(buf, len, Token.NotLog, '=', Token.NotAs);
+            },
+            '=' => {
+                return tokenize_one(buf, len, Token.As, '=', Token.Equality);
+            },
+            '\r' => {
+                if (buf.len > 2) {
+                    if (buf[1] == '\n') {
+                        len.* = 2;
+                        return Token.NewLine;
+                    }
+                }
+                len.* = 1;
+                return TokenError.InvalidToken;
+            },
+            '\n' => {
+                len.* += 1;
+                return Token.NewLine;
             },
             else => {
                 return TokenError.InvalidToken;
             },
         };
     }
-    return TokenError.InvalidToken;
+}
+
+inline fn tokenize_one(
+    buf: []const u8,
+    len: *usize,
+    def_tok: Token,
+    comp: u8,
+    comp_tok: Token,
+) Token {
+    if (buf.len > 2) {
+        if (buf[1] == comp) {
+            len.* = 2;
+            return comp_tok;
+        }
+    }
+    len.* = 1;
+    return def_tok;
+}
+
+inline fn tokenize_two(
+    buf: []const u8,
+    len: *usize,
+    def_tok: Token,
+    comp1: u8,
+    comp1_tok: Token,
+    comp2: u8,
+    comp2_tok: Token,
+) Token {
+    if (buf.len > 2) {
+        if (buf[1] == comp1) {
+            len.* = 2;
+            return comp1_tok;
+        } else if (buf[1] == comp2) {
+            len.* = 2;
+            return comp2_tok;
+        }
+    }
+    len.* = 1;
+    return def_tok;
 }
 
 inline fn word_len_check(buf: []const u8) usize {
@@ -181,11 +353,9 @@ inline fn tokenize_chars(buf: []const u8, len: *usize) Token {
     len.* = word_len_check(buf);
     token = .Symbol;
     var check = buf[0..len.*];
-    std.debug.print("check {s}\n", .{check});
     for (keywords, 0..) |word, idx| {
         if (word.len == len.*) {
             if (std.mem.eql(u8, word, check)) {
-                std.debug.print("match {s}\n", .{word});
                 token = @intToEnum(Token, idx);
                 return token;
             }
@@ -209,6 +379,7 @@ inline fn skip_whitespace(buf: []const u8) usize {
 
 const keywords = [_][]const u8{
     "import",
+    "use",
     "define",
     "macro",
     "test",
@@ -305,7 +476,7 @@ test "skip whitespace" {
     const tok = try get_next(buf, &len);
 
     try testing.expect(len == 5);
-    try testing.expect(tok.? == Token.Wsp);
+    try testing.expect(tok == Token.Wsp);
 }
 
 test "keywords tokens" {
@@ -362,9 +533,111 @@ test "keywords tokens" {
     len = 0;
     tok = tokenize_chars(buf, &len);
 
-    std.debug.print("result {}\n", .{tok});
     try testing.expect(len == 6);
-    std.debug.print("result {}\n", .{tok});
     try testing.expect(tok == Token.Export);
-    std.debug.print("result {}\n", .{tok});
+}
+
+test "get next singular" {
+    var buf: []const u8 = "(){}[].,$?#:;_\\`@";
+    var len: usize = 0;
+    var tok = try get_next(buf, &len);
+
+    try testing.expect(len == 1);
+    try testing.expect(tok == Token.OParen);
+
+    len = 0;
+    tok = try get_next(buf[1..], &len);
+
+    try testing.expect(len == 1);
+    try testing.expect(tok == Token.CParen);
+
+    len = 0;
+    tok = try get_next(buf[2..], &len);
+
+    try testing.expect(len == 1);
+    try testing.expect(tok == Token.OBrace);
+
+    len = 0;
+    tok = try get_next(buf[3..], &len);
+
+    try testing.expect(len == 1);
+    try testing.expect(tok == Token.CBrace);
+
+    len = 0;
+    tok = try get_next(buf[4..], &len);
+
+    try testing.expect(len == 1);
+    try testing.expect(tok == Token.OArray);
+
+    len = 0;
+    tok = try get_next(buf[5..], &len);
+
+    try testing.expect(len == 1);
+    try testing.expect(tok == Token.CArray);
+
+    len = 0;
+    tok = try get_next(buf[6..], &len);
+
+    try testing.expect(len == 1);
+    try testing.expect(tok == Token.Dot);
+
+    len = 0;
+    tok = try get_next(buf[7..], &len);
+
+    try testing.expect(len == 1);
+    try testing.expect(tok == Token.Comma);
+
+    len = 0;
+    tok = try get_next(buf[8..], &len);
+
+    try testing.expect(len == 1);
+    try testing.expect(tok == Token.Dollar);
+
+    len = 0;
+    tok = try get_next(buf[9..], &len);
+
+    try testing.expect(len == 1);
+    try testing.expect(tok == Token.Question);
+
+    len = 0;
+    tok = try get_next(buf[10..], &len);
+
+    try testing.expect(len == 1);
+    try testing.expect(tok == Token.Pound);
+
+    len = 0;
+    tok = try get_next(buf[11..], &len);
+
+    try testing.expect(len == 1);
+    try testing.expect(tok == Token.Colon);
+
+    len = 0;
+    tok = try get_next(buf[12..], &len);
+
+    try testing.expect(len == 1);
+    try testing.expect(tok == Token.SColon);
+
+    len = 0;
+    tok = try get_next(buf[13..], &len);
+
+    try testing.expect(len == 1);
+    try testing.expect(tok == Token.Rest);
+
+    len = 0;
+    tok = try get_next(buf[14..], &len);
+
+    try testing.expect(len == 1);
+    try testing.expect(tok == Token.BSlash);
+
+    len = 0;
+    tok = try get_next(buf[15..], &len);
+
+    try testing.expect(len == 1);
+    try testing.expect(tok == Token.Backtick);
+
+    len = 0;
+    tok = try get_next(buf[16..], &len);
+
+    try testing.expect(len == 1);
+    try testing.expect(tok == Token.At);
 }
