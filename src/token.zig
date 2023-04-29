@@ -2,7 +2,7 @@ const std = @import("std");
 const ascii = @import("std").ascii;
 const testing = std.testing;
 
-const TokenError = error{
+pub const TokenError = error{
     InvalidToken,
 };
 
@@ -138,7 +138,7 @@ pub const Token = enum(u8) {
     Range,
 };
 
-pub fn get_next(buf: []const u8, len: *usize) anyerror!Token {
+pub fn get_next(buf: []const u8, len: *usize) TokenError!Token {
     len.* = 0;
     const c = buf[0];
     if (ascii.isAlphabetic(c)) {
