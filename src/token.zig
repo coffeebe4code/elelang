@@ -349,9 +349,8 @@ inline fn word_len_check(buf: []const u8) usize {
 }
 
 inline fn tokenize_chars(buf: []const u8, len: *usize) Token {
-    var token: Token = undefined;
+    var token = Token.Symbol;
     len.* = word_len_check(buf);
-    token = .Symbol;
     var check = buf[0..len.*];
     for (keywords, 0..) |word, idx| {
         if (word.len == len.*) {
@@ -454,6 +453,13 @@ test "word len check regular" {
     const len = word_len_check(buf);
 
     try testing.expect(len == 5);
+}
+
+test "word len check one" {
+    const buf = "x ";
+    const len = word_len_check(buf);
+
+    try testing.expect(len == 1);
 }
 
 test "word len check _" {
