@@ -35,7 +35,7 @@ const Lexer = struct {
 
     pub fn collect(self: *Lexer) LexerError!Span {
         if (self.peeked) |capture| {
-            self.curr += capture.slice.len - 1;
+            self.curr += capture.slice.len;
             var tmp = capture;
             self.peeked = null;
             return tmp;
@@ -43,12 +43,27 @@ const Lexer = struct {
         return LexerError.InvalidCollectOnNull;
     }
 
+    pub fn peek_seek(self: *Lexer) TokenError!*const ?Span {
+        if (self.peeked != null) {
+            return &self.peeked;
+        }
+        var len: usize = 0;
+        if (self.curr != self.buf.len) {
+            const token = try tokenizer.get_next_seek(self.buf[self.curr..], &len);
+            self.peeked = Span{
+                .slice = self.buf[self.curr .. self.curr + len],
+                .token = token,
+            };
+        }
+        return &self.peeked;
+    }
+
     pub fn peek(self: *Lexer) TokenError!*const ?Span {
         if (self.peeked != null) {
             return &self.peeked;
         }
         var len: usize = 0;
-        if (self.curr != self.buf.len - 1) {
+        if (self.curr != self.buf.len) {
             const token = try tokenizer.get_next(self.buf[self.curr..], &len);
             self.peeked = Span{
                 .slice = self.buf[self.curr .. self.curr + len],
@@ -72,18 +87,28 @@ test "peek and collect" {
     const buf = "let x = 5;";
     var lex = Lexer.new(buf);
 
+    try testing.expect(std.mem.eql(u8, "let", buf[0..3]));
+
     try testing.expect((try lex.peek()).*.?.token == Token.Let);
     var collect = try lex.collect();
 
     try testing.expect(std.mem.eql(u8, collect.slice, buf[0..3]));
     try testing.expect(collect.token == Token.Let);
 
+    try testing.expect((try lex.peek()).*.?.token == Token.Wsp);
+    collect = try lex.collect();
+
+    try testing.expect(std.mem.eql(u8, collect.slice, buf[3..4]));
+    try testing.expect(collect.token == Token.Wsp);
+
     try testing.expect((try lex.peek()).*.?.token == Token.Symbol);
     collect = try lex.collect();
 
-    std.debug.print("slice {s}\n", .{collect.slice});
     try testing.expect(std.mem.eql(u8, collect.slice, buf[4..5]));
     try testing.expect(collect.token == Token.Symbol);
+
+    collect = try lex.collect();
+    collect = try lex.collect();
 
     try testing.expect((try lex.peek()).*.?.token == Token.As);
     collect = try lex.collect();
@@ -91,11 +116,11 @@ test "peek and collect" {
     try testing.expect(std.mem.eql(u8, collect.slice, buf[6..7]));
     try testing.expect(collect.token == Token.As);
 
-    try testing.expect((try lex.peek()).*.?.token == Token.Num);
+    try testing.expect((try lex.peek()).*.?.token == Token.As);
     collect = try lex.collect();
 
-    try testing.expect(std.mem.eql(u8, collect.slice, buf[8..9]));
-    try testing.expect(collect.token == Token.Num);
+    try testing.expect(std.mem.eql(u8, collect.slice, buf[6..7]));
+    try testing.expect(collect.token == Token.As);
 
     try testing.expect((try lex.peek()).*.?.token == Token.SColon);
     collect = try lex.collect();
