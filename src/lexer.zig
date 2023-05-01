@@ -22,7 +22,7 @@ const Lexer = struct {
         };
     }
 
-    pub fn collect_if(self: *Lexer, token: Token) anyerror!?Span {
+    pub fn collect_if(self: *Lexer, token: Token) LexerError!?Span {
         _ = token;
         if (self.peeked) |capture| {
             self.curr += capture.slice.len;
@@ -87,8 +87,6 @@ test "peek and collect" {
     const buf = "let x = 5;";
     var lex = Lexer.new(buf);
 
-    try testing.expect(std.mem.eql(u8, "let", buf[0..3]));
-
     try testing.expect((try lex.peek()).*.?.token == Token.Let);
     var collect = try lex.collect();
 
@@ -107,20 +105,30 @@ test "peek and collect" {
     try testing.expect(std.mem.eql(u8, collect.slice, buf[4..5]));
     try testing.expect(collect.token == Token.Symbol);
 
-    collect = try lex.collect();
-    collect = try lex.collect();
-
-    try testing.expect((try lex.peek()).*.?.token == Token.As);
+    _ = try lex.peek();
     collect = try lex.collect();
 
-    try testing.expect(std.mem.eql(u8, collect.slice, buf[6..7]));
-    try testing.expect(collect.token == Token.As);
+    var peeked = (try lex.peek()).*.?;
 
-    try testing.expect((try lex.peek()).*.?.token == Token.As);
+    try testing.expect(peeked.token == Token.As);
     collect = try lex.collect();
 
     try testing.expect(std.mem.eql(u8, collect.slice, buf[6..7]));
     try testing.expect(collect.token == Token.As);
+
+    _ = try lex.peek();
+    collect = try lex.collect();
+
+    peeked = (try lex.peek()).*.?;
+
+    try testing.expect(peeked.token == Token.Num);
+    collect = try lex.collect();
+
+    try testing.expect(std.mem.eql(u8, collect.slice, buf[8..9]));
+    try testing.expect(collect.token == Token.Num);
+
+    _ = try lex.peek();
+    collect = try lex.collect();
 
     try testing.expect((try lex.peek()).*.?.token == Token.SColon);
     collect = try lex.collect();
