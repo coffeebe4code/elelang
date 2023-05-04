@@ -144,7 +144,7 @@ pub fn get_next(buf: []const u8, len: *usize) TokenError!Token {
     if (ascii.isAlphabetic(c)) {
         return tokenize_chars(buf, len);
     } else if (ascii.isDigit(c)) {
-        return Token.Num;
+        return tokenize_num(buf, len);
     } else {
         return switch (c) {
             ' ' => {
@@ -348,6 +348,25 @@ inline fn word_len_check(buf: []const u8) usize {
     return len;
 }
 
+inline fn collect_digits(buf: []const u8, len: *usize) void {
+    var curr: usize = 0;
+    while (buf.len > curr) {
+        const c = buf[curr];
+        if (ascii.isDigit(c)) {
+            curr += 1;
+        } else {
+            break;
+        }
+    }
+    len.* += curr;
+}
+
+inline fn tokenize_num(buf: []const u8, len: *usize) Token {
+    var token = Token.Num;
+    collect_digits(buf, len);
+    return token;
+}
+
 inline fn tokenize_chars(buf: []const u8, len: *usize) Token {
     var token = Token.Symbol;
     len.* = word_len_check(buf);
@@ -469,6 +488,15 @@ test "word len check _" {
     try testing.expect(len == 11);
 }
 
+test "single" {
+    const buf = "x";
+    var len: usize = 0;
+    const tok = try get_next(buf, &len);
+
+    try testing.expect(tok == Token.Symbol);
+    try testing.expect(len == 1);
+}
+
 test "word len check -" {
     const buf = "hello-there ";
     const len = word_len_check(buf);
@@ -483,6 +511,15 @@ test "skip whitespace" {
 
     try testing.expect(len == 5);
     try testing.expect(tok == Token.Wsp);
+}
+
+test "basic numbers" {
+    var buf: []const u8 = "55";
+    var len: usize = 0;
+    var tok = tokenize_num(buf, &len);
+
+    try testing.expect(len == 2);
+    try testing.expect(tok == Token.Num);
 }
 
 test "keywords tokens" {

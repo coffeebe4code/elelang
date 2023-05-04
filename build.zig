@@ -1,50 +1,34 @@
 const std = @import("std");
 
+const count = 3;
+
+const names = [count][]const u8{ "token", "span", "lexer" };
+const files = [count][]const u8{ "src/token.zig", "src/span.zig", "src/lexer.zig" };
+
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
 
     const optimize = b.standardOptimizeOption(.{});
 
-    const token = b.addStaticLibrary(.{
-        .name = "token",
-        .root_source_file = .{ .path = "src/token.zig" },
-        .target = target,
-        .optimize = optimize,
-    });
+    for (0..count) |i| {
+        const s_lib = b.addStaticLibrary(.{
+            .name = names[i],
+            .root_source_file = .{ .path = files[i] },
+            .target = target,
+            .optimize = optimize,
+        });
 
-    const span = b.addStaticLibrary(.{
-        .name = "span",
-        .root_source_file = .{ .path = "src/span.zig" },
-        .target = target,
-        .optimize = optimize,
-    });
+        b.installArtifact(s_lib);
 
-    const lexer = b.addStaticLibrary(.{
-        .name = "lexer",
-        .root_source_file = .{ .path = "src/lexer.zig" },
-        .target = target,
-        .optimize = optimize,
-    });
+        const s_tests = b.addTest(.{
+            .root_source_file = .{ .path = files[i] },
+            .target = target,
+            .optimize = optimize,
+        });
 
-    b.installArtifact(token);
-    b.installArtifact(span);
-    b.installArtifact(lexer);
+        const run_tests = b.addRunArtifact(s_tests);
 
-    const token_tests = b.addTest(.{
-        .root_source_file = .{ .path = "src/token.zig" },
-        .target = target,
-        .optimize = optimize,
-    });
-    const lexer_tests = b.addTest(.{
-        .root_source_file = .{ .path = "src/lexer.zig" },
-        .target = target,
-        .optimize = optimize,
-    });
-
-    const run_token_tests = b.addRunArtifact(token_tests);
-    const run_lexer_tests = b.addRunArtifact(lexer_tests);
-
-    const test_step = b.step("test", "Run library tests");
-    test_step.dependOn(&run_token_tests.step);
-    test_step.dependOn(&run_lexer_tests.step);
+        const test_step = b.step(files[i], "Run library tests");
+        test_step.dependOn(&run_tests.step);
+    }
 }
