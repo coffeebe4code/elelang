@@ -1,9 +1,9 @@
 const std = @import("std");
 
-const count = 3;
+const count = 5;
 
-const names = [count][]const u8{ "token", "span", "lexer" };
-const files = [count][]const u8{ "src/token.zig", "src/span.zig", "src/lexer.zig" };
+const names = [count][]const u8{ "token", "span", "lexer", "ast", "parser" };
+const files = [count][]const u8{ "src/token.zig", "src/span.zig", "src/lexer.zig", "src/ast.zig", "src/parser.zig" };
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
