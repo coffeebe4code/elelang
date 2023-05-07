@@ -5,35 +5,36 @@ pub const AstTag = enum {
     BinOp,
     UnOp,
     Ident,
+    Num,
 };
 
 pub const Ast = union(AstTag) {
-    binop: .{ *Ast, Token, *Ast },
-    unop: .{ *Ast, Token },
-    ident: .{*Span},
-    num: .{*Span},
+    BinOp: struct { *Ast, Token, *Ast },
+    UnOp: struct { *Ast, Token },
+    Ident: Span,
+    Num: Span,
 };
 
 pub fn make_binop(left: *Ast, op: Token, right: *Ast) Ast {
     return Ast{
-        .binop = .{ left, op, right },
+        .BinOp = .{ left, op, right },
     };
 }
 
 pub fn make_unop(expr: *Ast, op: Token) Ast {
     return Ast{
-        .unop = .{ expr, op },
+        .UnOp = .{ expr, op },
     };
 }
 
 pub fn make_ident(span: *Span) Ast {
     return Ast{
-        .ident = .{span},
+        .Ident = span,
     };
 }
 
-pub fn make_num(span: *Span) Ast {
+pub fn make_num(span: Span) Ast {
     return Ast{
-        .num = .{span},
+        .Num = span,
     };
 }

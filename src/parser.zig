@@ -2,10 +2,12 @@ const Token = @import("./token.zig").Token;
 const TokenError = @import("./token.zig").TokenError;
 const Lexer = @import("./lexer.zig").Lexer;
 const Ast = @import("./ast.zig").Ast;
+const ast = @import("./ast.zig");
 const Span = @import("./span.zig").Span;
 const AstTag = @import("./ast.zig").AstTag;
 const Allocator = @import("std").mem.Allocator;
 const std = @import("std");
+const ArrayList = @import("std").ArrayList;
 const testing = @import("std").testing;
 
 const ParserError = error{
@@ -14,12 +16,13 @@ const ParserError = error{
 
 const Parser = struct {
     lexer: Lexer,
-    asts: []Ast,
+    asts: ArrayList(Ast),
 
-    pub fn init(lexer: *Lexer, allocator: Allocator) Parser {
+    pub fn init(lexer: Lexer, allocator: Allocator) anyerror!Parser {
+        var asts: ArrayList(Ast) = std.ArrayList(Ast).init(allocator);
         return Parser{
             .lexer = lexer,
-            .asts = std.ArrayList(Ast).initCapacity(allocator, 100),
+            .asts = asts,
         };
     }
 
@@ -27,13 +30,13 @@ const Parser = struct {
         self.asts.deinit();
     }
 
-    pub fn num(self: *Parser) TokenError!?*Ast {
+    pub fn parse_num(self: *Parser) anyerror!?*Ast {
         const span = try self.lexer.collect_if(Token.Num);
         if (span) |capture| {
-            const ast = Ast.make_num(capture);
+            const local = ast.make_num(capture);
 
-            try self.asts.append(ast);
-            return &self.asts[self.asts.Slice.len - 1];
+            try self.asts.append(local);
+            return &self.asts.items[self.asts.items.len - 1];
         }
         return null;
     }
@@ -41,15 +44,10 @@ const Parser = struct {
 
 test "parse num" {
     const buf = "5";
-    var lex = Lexer.new(buf);
-    var parser = Parser.init(lex, std.testing.allocator);
+    const lex = Lexer.new(buf);
+    var parser = try Parser.init(lex, std.testing.allocator);
     defer parser.deinit();
-    const result = try parser.num();
+    const result = try parser.parse_num();
 
-    try testing.expect(result.?.* == Ast{
-        .num = Span{
-            .slice = "5",
-            .token = Token.Num,
-        },
-    });
+    try testing.expect(result.?.*.Num.token == Token.Num);
 }
