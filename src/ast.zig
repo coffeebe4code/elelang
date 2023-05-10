@@ -9,19 +9,19 @@ pub const AstTag = enum {
 };
 
 pub const Ast = union(AstTag) {
-    BinOp: struct { *Ast, Token, *Ast },
-    UnOp: struct { *Ast, Token },
+    BinOp: struct { *Ast, Span, *Ast },
+    UnOp: struct { *Ast, Span },
     Ident: Span,
     Num: Span,
 };
 
-pub fn make_binop(left: *Ast, op: Token, right: *Ast) Ast {
+pub fn make_binop(left: *Ast, op: Span, right: *Ast) Ast {
     return Ast{
         .BinOp = .{ left, op, right },
     };
 }
 
-pub fn make_unop(expr: *Ast, op: Token) Ast {
+pub fn make_unop(expr: *Ast, op: Span) Ast {
     return Ast{
         .UnOp = .{ expr, op },
     };

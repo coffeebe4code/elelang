@@ -51,19 +51,22 @@ pub const Lexer = struct {
         return null;
     }
 
-    pub fn peek_seek(self: *Lexer) TokenError!*const ?Span {
+    pub fn peek_skip_ws(self: *Lexer) TokenError!*const ?Span {
         if (self.peeked != null) {
             return &self.peeked;
         }
         var len: usize = 0;
+        while(true) {
         if (self.curr != self.buf.len) {
-            const token = try tokenizer.get_next_seek(self.buf[self.curr..], &len);
+            const token = try tokenizer.get_next(self.buf[self.curr..], &len);
+            if (token. ) {
             self.peeked = Span{
                 .slice = self.buf[self.curr .. self.curr + len],
                 .token = token,
             };
+            return &self.peeked;
         }
-        return &self.peeked;
+        }
     }
 
     pub fn peek(self: *Lexer) TokenError!*const ?Span {
