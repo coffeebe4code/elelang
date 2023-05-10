@@ -64,7 +64,7 @@ const Parser = struct {
 
 test "parse high bin" {
     const buf = "5 + 5";
-    const lex = Lexer.new(buf);
+    const lex = Lexer.new(buf, .{ .skip = true });
     var parser = try Parser.init(lex, std.testing.allocator);
     defer parser.deinit();
     const result = try parser.parse_high_bin();
@@ -79,7 +79,7 @@ test "parse high bin" {
 
 test "parse num" {
     const buf = "5";
-    const lex = Lexer.new(buf);
+    const lex = Lexer.new(buf, .{});
     var parser = try Parser.init(lex, std.testing.allocator);
     defer parser.deinit();
     const result = try parser.parse_num();

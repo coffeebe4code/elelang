@@ -5,16 +5,22 @@ const Span = @import("./span.zig").Span;
 const testing = @import("std").testing;
 const std = @import("std");
 
+pub const Options = struct {
+    skip: bool = false,
+};
+
 pub const Lexer = struct {
     peeked: ?Span,
     buf: []const u8,
     curr: usize,
+    opts: Options,
 
-    pub fn new(buffer: []const u8) Lexer {
+    pub fn new(buffer: []const u8, opts: Options) Lexer {
         return Lexer{
             .peeked = null,
             .buf = buffer,
             .curr = 0,
+            .opts = opts,
         };
     }
 
@@ -51,37 +57,25 @@ pub const Lexer = struct {
         return null;
     }
 
-    pub fn peek_skip_ws(self: *Lexer) TokenError!*const ?Span {
-        if (self.peeked != null) {
-            return &self.peeked;
-        }
-        var len: usize = 0;
-        while(true) {
-        if (self.curr != self.buf.len) {
-            const token = try tokenizer.get_next(self.buf[self.curr..], &len);
-            if (token. ) {
-            self.peeked = Span{
-                .slice = self.buf[self.curr .. self.curr + len],
-                .token = token,
-            };
-            return &self.peeked;
-        }
-        }
-    }
-
     pub fn peek(self: *Lexer) TokenError!*const ?Span {
         if (self.peeked != null) {
             return &self.peeked;
         }
         var len: usize = 0;
-        if (self.curr != self.buf.len) {
+        while (true) {
+            if (self.curr >= self.buf.len) {
+                return &self.peeked;
+            }
             const token = try tokenizer.get_next(self.buf[self.curr..], &len);
-            self.peeked = Span{
-                .slice = self.buf[self.curr .. self.curr + len],
-                .token = token,
-            };
+            if (self.opts.skip and (token == Token.Wsp or token == Token.NewLine)) {} else {
+                self.peeked = Span{
+                    .slice = self.buf[self.curr .. self.curr + len],
+                    .token = token,
+                };
+                return &self.peeked;
+            }
+            self.curr += len;
         }
-        return &self.peeked;
     }
 
     pub fn has_token_consume(self: Lexer, token: Token) TokenError!bool {
@@ -106,7 +100,7 @@ test "collect if of" {
 
 test "collect if of" {
     const buf = "const";
-    var lex = Lexer.new(buf);
+    var lex = Lexer.new(buf, .{});
 
     var collect = try lex.collect_if(Token.Const);
 
@@ -117,7 +111,7 @@ test "collect if of" {
 
 test "collect if" {
     const buf = "const";
-    var lex = Lexer.new(buf);
+    var lex = Lexer.new(buf, .{});
 
     const peeked = try lex.peek();
     _ = peeked;
@@ -129,7 +123,7 @@ test "collect if" {
 
 test "peek and collect" {
     const buf = "let x = 5;";
-    var lex = Lexer.new(buf);
+    var lex = Lexer.new(buf, .{});
 
     try testing.expect((try lex.peek()).*.?.token == Token.Let);
     var collect = try lex.collect();
