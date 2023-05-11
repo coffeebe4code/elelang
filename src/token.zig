@@ -7,75 +7,80 @@ pub const TokenError = error{
 };
 
 pub const Token = enum(u8) {
-    Import,
-    Use,
-    Define,
-    Macro,
-    Test,
-    Bench,
-    Mut,
-    Let,
-    Const,
-    Once,
-    Local,
-    Num,
-    I32,
-    U32,
-    U64,
-    I64,
-    I16,
-    U16,
-    U8,
-    I8,
-    Bit,
-    F64,
-    F32,
-    D32,
-    D64,
-    If,
-    Else,
-    Type,
-    This,
-    Null,
-    Char,
-    String,
-    Inline,
-    Static,
-    Switch,
-    For,
-    In,
-    Break,
-    Enum,
-    Pub,
-    Return,
-    Async,
-    Await,
-    Box,
-    Trait,
-    Ptr,
-    Match,
-    Addr,
-    Vol,
-    True,
-    False,
-    Void,
-    Iface,
-    Gen,
-    Undef,
-    Never,
-    Bool,
-    Byte,
-    Fn,
-    Contract,
-    Queue,
-    Thread,
-    Pool,
-    Observe,
-    Message,
-    Block,
-    Suspend,
-    Resume,
-    Export,
+    K_Import,
+    K_Use,
+    K_Define,
+    K_Macro,
+    K_Test,
+    K_Bench,
+    K_Mut,
+    K_Let,
+    K_Const,
+    K_Once,
+    K_Local,
+    K_Num,
+    K_I32,
+    K_U32,
+    K_U64,
+    K_I64,
+    K_I16,
+    K_U16,
+    K_U8,
+    K_I8,
+    K_Bit,
+    K_F64,
+    K_F32,
+    K_D32,
+    K_D64,
+    K_If,
+    K_Else,
+    K_Type,
+    K_This,
+    K_Null,
+    K_Char,
+    K_String,
+    K_Inline,
+    K_Static,
+    K_Switch,
+    K_For,
+    K_In,
+    K_Break,
+    K_Enum,
+    K_Pub,
+    K_Return,
+    K_Async,
+    K_Await,
+    K_Box,
+    K_Trait,
+    K_Ptr,
+    K_Match,
+    K_Addr,
+    K_Vol,
+    K_True,
+    K_False,
+    K_Void,
+    K_Iface,
+    K_Gen,
+    K_Undef,
+    K_Never,
+    K_Bool,
+    K_Byte,
+    K_Fn,
+    K_Contract,
+    K_Queue,
+    K_Thread,
+    K_Pool,
+    K_Observe,
+    K_Message,
+    K_Block,
+    K_Suspend,
+    K_Resume,
+    K_Export,
+    K_Notify,
+    K_Not,
+    K_And,
+    K_Or,
+    // non keyword
     OParen,
     CParen,
     OBrace,
@@ -130,6 +135,7 @@ pub const Token = enum(u8) {
     DQuote,
     SQuote,
     Symbol,
+    Num,
     Hex,
     Bin,
     Decimal,
@@ -465,6 +471,10 @@ const keywords = [_][]const u8{
     "suspend",
     "resume",
     "export",
+    "notify",
+    "not",
+    "and",
+    "or",
 };
 
 test "word len check regular" {
@@ -528,56 +538,56 @@ test "keywords tokens" {
     var tok = tokenize_chars(buf, &len);
 
     try testing.expect(len == 5);
-    try testing.expect(tok == Token.Macro);
+    try testing.expect(tok == Token.K_Macro);
 
     buf = "const";
     len = 0;
     tok = tokenize_chars(buf, &len);
 
     try testing.expect(len == 5);
-    try testing.expect(tok == Token.Const);
+    try testing.expect(tok == Token.K_Const);
 
     buf = "local";
     len = 0;
     tok = tokenize_chars(buf, &len);
 
     try testing.expect(len == 5);
-    try testing.expect(tok == Token.Local);
+    try testing.expect(tok == Token.K_Local);
 
     buf = "true";
     len = 0;
     tok = tokenize_chars(buf, &len);
 
     try testing.expect(len == 4);
-    try testing.expect(tok == Token.True);
+    try testing.expect(tok == Token.K_True);
 
     buf = "string";
     len = 0;
     tok = tokenize_chars(buf, &len);
 
     try testing.expect(len == 6);
-    try testing.expect(tok == Token.String);
+    try testing.expect(tok == Token.K_String);
 
     buf = "pub";
     len = 0;
     tok = tokenize_chars(buf, &len);
 
     try testing.expect(len == 3);
-    try testing.expect(tok == Token.Pub);
+    try testing.expect(tok == Token.K_Pub);
 
     buf = "resume";
     len = 0;
     tok = tokenize_chars(buf, &len);
 
     try testing.expect(len == 6);
-    try testing.expect(tok == Token.Resume);
+    try testing.expect(tok == Token.K_Resume);
 
     buf = "export";
     len = 0;
     tok = tokenize_chars(buf, &len);
 
     try testing.expect(len == 6);
-    try testing.expect(tok == Token.Export);
+    try testing.expect(tok == Token.K_Export);
 }
 
 test "get next singular" {

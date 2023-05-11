@@ -92,20 +92,20 @@ test "collect if of" {
     const buf = "const";
     var lex = Lexer.new(buf);
 
-    var collect = try lex.collect_if_of(&[_]Token{ .Let, .Const });
+    var collect = try lex.collect_if_of(&[_]Token{ .K_Let, .K_Const });
 
     try testing.expect(std.mem.eql(u8, collect.?.slice, buf[0..5]));
-    try testing.expect(collect.?.token == Token.Const);
+    try testing.expect(collect.?.token == Token.K_Const);
 }
 
 test "collect if of" {
     const buf = "const";
     var lex = Lexer.new(buf, .{});
 
-    var collect = try lex.collect_if(Token.Const);
+    var collect = try lex.collect_if(Token.K_Const);
 
     try testing.expect(std.mem.eql(u8, collect.?.slice, buf[0..5]));
-    try testing.expect(collect.?.token == Token.Const);
+    try testing.expect(collect.?.token == Token.K_Const);
     collect = try lex.collect();
 }
 
@@ -115,21 +115,21 @@ test "collect if" {
 
     const peeked = try lex.peek();
     _ = peeked;
-    var collect = try lex.collect_if(Token.Const);
+    var collect = try lex.collect_if(Token.K_Const);
 
     try testing.expect(std.mem.eql(u8, collect.?.slice, buf[0..5]));
-    try testing.expect(collect.?.token == Token.Const);
+    try testing.expect(collect.?.token == Token.K_Const);
 }
 
 test "peek and collect" {
     const buf = "let x = 5;";
     var lex = Lexer.new(buf, .{});
 
-    try testing.expect((try lex.peek()).*.?.token == Token.Let);
+    try testing.expect((try lex.peek()).*.?.token == Token.K_Let);
     var collect = try lex.collect();
 
     try testing.expect(std.mem.eql(u8, collect.?.slice, buf[0..3]));
-    try testing.expect(collect.?.token == Token.Let);
+    try testing.expect(collect.?.token == Token.K_Let);
 
     try testing.expect((try lex.peek()).*.?.token == Token.Wsp);
     collect = try lex.collect();
