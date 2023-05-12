@@ -5,7 +5,7 @@ type Vehicle: {} = {
   model: string,
   
   pub fn new(wheels: num, make: string, model: string) Car {
-    return Car{
+    return Vehicle{
       wheels, 
       make, 
       model, 
@@ -22,10 +22,10 @@ let y = Vehicle.new(4, 'Toyota', 'Prius');
 type Drive: () = drive(self: Vehicle, direction: string) {
   // drive that vehicle
 };
-// types can be implementation can be up to the consumer.
+// types can be force implementation by the implementer.
 type Drive: () = drive(self: Vehicle, direction: string);
 
-// if you provided a base implementation the type doesn't need to specify the method, it can just be used
+// if we provide a base implementation the type doesn't need to specify the method, it can just be used
 type Vehicle: {}, Drive = {
   wheels: num,
   make: string,
@@ -35,8 +35,7 @@ type Vehicle: {}, Drive = {
 let x = Vehicle { 2, 'Honda', 'Rebel 300' };
 x.drive("North");
 
-// self is a special method parameter. It binds to the object. If an object implements multiple of the same method or properties. You can namespace it
-
+// self is a special method parameter. It binds to the object. If an object implements multiple of the same method or properties.
 type AutoPilot: () = drive(self: Vehicle, direction: string) {
   // implementation
 };
@@ -58,11 +57,11 @@ Drive.drive(x, "North");
 // or
 AutoPilot.drive(x, "West");
 
-// how should this be done? are there properties that can be reflected upon an object, such as len?
+// which implementation of this looks the best? are there properties that can be reflected upon an object, such as len?
 // this composition is powerful, we can alias a type as well without modifying.
 type DatabaseID: u64 = self;
 
-// we can limit to a range, to match database lengths
+// we can limit to a range, to match database lengths. again how should this be done?
 type NameField: string = self[0..25];
 
 // const means the variable is assigned once, and then not modifiable.
@@ -70,10 +69,10 @@ type NameField: string = self[0..25];
 const x = 5;
 const y = [5,2];
 
-x = x + x; // not allowed
-y.push(3); // not allowed, many programming languages do allow this to const variables.
+x = 3 + 3; // not allowed
+y.push(3); // not allowed, many programming languages do allow this to const objects or arrays.
 
-// we need a way to express constness when passing arguments to functions or assigning to other variables.
+// we need a way to express constness when passing arguments to functions.
 type AutoPilot: () = drive(self: Vehicle, direction: string) {
   self.wheels = 5; // Not allowed!
 };
@@ -83,7 +82,7 @@ type Drive: () = drive(self: *Vehicle, direction: string) {
   self.wheels = 6;
 };
 
-// Note:: Although this is technically a pointer, you NEVER need to treat it as a pointer. No need to dereference or reference anything.
+// Note:: this NEVER need to treated it as a pointer. No need to dereference or reference anything. The mutability with * in ttlang is not related to references.
 
 // This interface allows us to know very clearly if a function intends to mutate the value.
 
@@ -92,8 +91,7 @@ Drive.drive(ford, "North"); // not allowed!
 
 // The "ford" is const, and therefore, we do not want anything modifying its internals.
 
-// TT lang has no garbage collector, which means we need to know when to clean up memory, const, and let help us in controlling the mutability. But there is also ownership.
-// any type that is not scalar, (), {}, [], and string. are not cloned when assigned.
+// TT lang has no garbage collector, which means we need to know when to clean up memory, const, and let help us in controlling the mutability. Thus, introducing lifetimes.
 
 const x = 5;
 const y = x;
@@ -104,14 +102,14 @@ const y = x;
 const prius = Vehicle {4, 'Toyota', 'Prius' };
 // do something with prius.
 // now going to set it to a modifyable let.
-let prius_modify = prius; // move has happened here!
+let modifiable_prius = prius; // move has happened here!
 prius.reverse(); // uh-oh. not allowed!
 
 // For performance reasons, we don't want to copy objects all the time, but in order to avoid using a garbage collector, we need to know who maintains control of the object, so we know when to free it after it has been dropped from the scope.
 //
-// This is probably the hardest concept to get coming from another language, but it is the most powerful in terms of performance and optimizations that can be applied to your programs.
+// This is probably the hardest concept to get coming from another language, but it is the most powerful in terms of performance and optimizations that can be applied to programs.
 
-// use the keyword copy, when you want to assign the variable the same value, duplicating the object, and preventing a move.
+// use the keyword copy, when we want to assign the variable the same value, duplicating the object, and preventing a move.
 const honda = Vehicle{ 4, 'Honda', 'Civic' }; 
 const civic = copy honda;
 AutoPilot.drive(honda, "South"); // allowed now, two objects exist in memory.

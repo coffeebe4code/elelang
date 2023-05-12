@@ -84,6 +84,8 @@ pub const Token = enum(u8) {
     K_AnyError,
     K_Extends,
     K_Impl,
+    K_Copy,
+    K_TypeOf,
     // non keyword
     OParen,
     CParen,
@@ -483,6 +485,8 @@ const keywords = [_][]const u8{
     "anyerror",
     "extends",
     "impl",
+    "copy",
+    "typeof",
 };
 
 test "word len check regular" {
