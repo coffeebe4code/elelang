@@ -37,17 +37,12 @@ const Parser = struct {
         const mb_left = try self.parse_high_bin();
         if (mb_left) |left| {
             const mb_bin = try self.lexer.collect_if_of(&[2]Token{ Token.Mul, Token.Div, Token.Mod });
-            if (mb_bin) |bin| {
-                const mb_right = try self.high_bin();
-                if (mb_right) |right| {
-                    const local = ast.make_binop(left, bin, right);
+            const bin = try expect_some_val(mb_bin, "low_bin");
+            const right = try expect_some_val(try self.high_bin());
+            const local = ast.make_binop(left, bin, right);
 
-                    try self.asts.append(local);
-                    return &self.asts.items[self.asts.items.len - 1];
-                }
-                return ParserError.ExpectedOneOfFound;
-            }
-            return left;
+            try self.asts.append(local);
+            return &self.asts.items[self.asts.items.len - 1];
         }
         return null;
     }
@@ -56,16 +51,11 @@ const Parser = struct {
         const mb_left = try self.unary();
         if (mb_left) |left| {
             const mb_bin = try self.lexer.collect_if_of(&[2]Token{ Token.Plus, Token.Sub });
-            if (mb_bin) |bin| {
-                const mb_right = try self.unary();
-                if (mb_right) |right| {
-                    const local = ast.make_binop(left, bin, right);
-                    try self.asts.append(local);
-                    return &self.asts.items[self.asts.items.len - 1];
-                }
-                return ParserError.ExpectedOneOfFound;
-            }
-            return left;
+            const bin = try expect_some_val(mb_bin, "high_bin");
+            const right = try expect_some_val(try self.unary());
+            const local = ast.make_binop(left, bin, right);
+            try self.asts.append(local);
+            return &self.asts.items[self.asts.items.len - 1];
         }
         return null;
     }
@@ -73,13 +63,10 @@ const Parser = struct {
     pub fn unary(self: *Parser) anyerror!?*Ast {
         const span = try self.lexer.collect_if_of(&[2]Token{ Token.Plus, Token.Sub });
         if (span) |capture| {
-            const mb_rhs = try expect_some_val(self.unary(), "unary");
-            if (mb_rhs) |rhs| {
-                const local = ast.make_unop(rhs, capture);
-                try self.asts.append(local);
-                return &self.asts.items[self.asts.items.len - 1];
-            }
-            return ParserError.ExpectedOneOfFound;
+            const rhs = try expect_some_val(try self.unary(), "unary");
+            const local = ast.make_unop(rhs, capture);
+            try self.asts.append(local);
+            return &self.asts.items[self.asts.items.len - 1];
         }
         return try self.parse_num();
     }
@@ -95,8 +82,11 @@ const Parser = struct {
     }
 };
 
-fn expect_some_val(expr: anyerror!?*Ast, message: []const u8) anyerror!?*Ast {
+fn expect_some_val(expr: anyerror!?*Ast, message: []const u8) anyerror!*Ast {
     return expr catch {
+        try stdout.print("{s}\n", .{message});
+        return ParserError.ExpectedOneOfFound;
+    } orelse {
         try stdout.print("{s}\n", .{message});
         return ParserError.ExpectedOneOfFound;
     };
