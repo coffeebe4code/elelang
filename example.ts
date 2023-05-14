@@ -36,6 +36,7 @@ type Vehicle: {} + Drive = {
 let x = Vehicle { 2, 'Honda', 'Rebel 300' };
 x.drive("North");
 
+
 // self is a special method parameter. It binds to the object. If an object implements multiple of the same method or properties.
 type AutoPilot: () = drive(self: Vehicle, direction: string) {
   // implementation
@@ -43,6 +44,7 @@ type AutoPilot: () = drive(self: Vehicle, direction: string) {
 type Drive: () = drive(self: Vehicle, direction: string) {
   // implementation
 };
+// the previous 2 do not compile, as we will see later.
 
 type Vehicle: {} + Drive + AutoPilot = {
   wheels: num,
@@ -90,7 +92,7 @@ type Drive: () = drive(self: *Vehicle, direction: string) {
 // This interface allows us to know very clearly if a function intends to mutate the value.
 
 const ford = Vehicle {4, 'Ford', 'F150' };
-AutoPilot.drive(ford, "North"); // not allowed!
+Drive.drive(ford, "North"); // not allowed! drive is changing the number of wheels here.
 
 // The "ford" variable is const, and therefore, we do not want anything modifying its internals.
 
