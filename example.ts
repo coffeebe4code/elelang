@@ -176,7 +176,7 @@ Writer.log(vehicle); // it would be ridiculous to pass ownership or copy when pr
 
 // writer would should look like this.
 type Writer: {} = {
-  pub fn log(self: &{}, &toString) {
+  pub fn log(self: &{}, out: &toString) {
 
   } 
 } 
@@ -185,13 +185,13 @@ type Writer: {} = {
 // below is some very strange typing.
 type writer: &{} = { // silly
   // {} ownership silly
-  pub fn log(self: {}, &T) {} 
+  pub fn log(self: {}, out: &toString) {} 
 }
 // from that example, calling writer.log() will take ownership of self, but self is a readonly non owned version of an {}. This is not allowed! It would be silly to take ownership within the call to log, making Writer suddenly unavailable, unless it returned itself.
 
 // it is silly to make a readonly version of a type that we intend to be an actual object in memory. So we do not allow modifiability types in definitions.
 type writer: &Writer = { // silly
-  pub fn log(self: &{}, &T) {
+  pub fn log(self: &{}, out: &toString) {
 
   } 
 } 
